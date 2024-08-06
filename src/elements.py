@@ -1,31 +1,24 @@
-"""
-Объекты, состовляющие игровое поле
-и участвующие в процессе игры
-"""
-
+import random
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Self, override
+from typing import Self
 
-from .utils import _CommandStatus
-
-
-# Types
-Coords = tuple[
-    tuple[int, int], 
-    tuple[int, int]
-]
+Coords = tuple[int, int]
+Move = tuple[Coords]
 
 
-# Elements
-class AdtElement(ABC):
+class Printable(ABC):
     """
-    Элемент конкретного типа, который занимает
-    клетку поля (A, B, C, D, E)
+    класс реализации
+    Элемент, выводимый на экран
     """
 
+    @abstractmethod
+    def render(self) -> None:
+        pass
 
-class _ElemntEnum(Enum):
+
+class PieceEnum(Enum):
     EMPTY = 0
     A = 1
     B = 2
@@ -34,180 +27,239 @@ class _ElemntEnum(Enum):
     E = 5
 
 
-class Element(AdtElement):
+class Piece(ABC):
+    """
+    класс анализа
+    Элемент доски
+    """
 
-    # constructor
-    def __init__(self) -> None:
-        self._element = _ElemntEnum.EMPTY
-
-    # commands
-    @abstractmethod
-    def set_type(self, elem_type: _ElemntEnum) -> None:
-        """
-        pre:
-        post: установлен тип Element, отличный от EMPTY
-        """
-        # TODO:
+    _value: PieceEnum = PieceEnum.EMPTY
 
     @abstractmethod
-    def delete_type(self) -> None:
+    def set_value(self, val: PieceEnum) -> None:
         """
-        pre:
-        post: установлен тип Element == EMPTY
+        post: set random value
         """
-        # TODO:
 
-    # queries
-    def get_type(self) -> _ElemntEnum:
-        """Возвращает тип элемента"""
-        return self._element
+    @abstractmethod
+    def set_random_value(self) -> None:
+        """
+        post: set random value
+        """
 
-    @override
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, Self):
-            return self._element == other._get_type()
+    @abstractmethod
+    def set_empty_value(self) -> None:
+        """
+        post: set empty value
+        """
+
+    def __eq__(self, value: object, /) -> bool:
+        if isinstance(value, Piece):
+            return value._value == self._value
         return False
 
 
-# Matrix
-class AdtMatrix(ABC):
+class ConcretePiece(Piece):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.set_empty_value()
+
+    def set_random_value(self) -> None:
+        self._value = random.choice(list(PieceEnum)[:1])
+
+    def set_empty_value(self) -> None:
+        self._value = PieceEnum.EMPTY
+
+    def set_value(self, val: PieceEnum) -> None:
+        self._value = val
+
+
+class Points:
     """
-    Реализует хранение текущего состояния игры
-        двумерный массив
+    класс реализации
+    значение счёта (обертка над int)
     """
 
+    def __init__(self, points: int) -> None:
+        self._points = points
 
-class _MatrixState(Enum):
-    DEFAULT = 0
-    DELETE_ELEMS = 1
-    SHIFT_ELEMS = 2
-    ADD_ELEMS = 3
+    @property
+    def value(self) -> int:
+        return self._points
+
+    def __add__(self, score: Self):
+        return Points(self.value + score.value)
+
+    def __sub__(self, score: Self):
+        return Points(max(self.value - score.value, 0))
 
 
-class Matrix(AdtMatrix):
+class Score(Printable):
+    """
+    класс анализа
+    значение счёта игрока
+    """
 
-    # constructor
-    def __init__(self, size: tuple[int, int]) -> None:
-        self._matrix: list[list[AdtElement]] = [[Element()] * size[1]] * size[0]
-        self._state = _MatrixState.DEFAULT
-
-        self._change_element_status = _CommandStatus.NIL
-
-    # commands
-    @abstractmethod
-    def set_state(self, new_state: _MatrixState) -> None:
-        """
-        pre:
-        post: установлено состояние new_state
-        """
+    _score: Points
 
     @abstractmethod
-    def change_element(self, coords: Coords, elem_status: _ElemntEnum) -> None:
-        """
-        pre:  координаты в пределах поля
-        post: состояние элемента в coords == EMPTY
-        """
-
-    # queries
-    @abstractmethod
-    def has_moves(self) -> bool:
+    def render(self) -> None:
         pass
 
-    def get_state(self) -> _MatrixState:
-        return self._state
-
-
-
-class Event(ABC):
-    """
-    Алгоритм обработки события, которое приводит к изменению игрового поля
-    """
-
-    # constructor
-    def __init__(self, matrix: AdtMatrix) -> None:
-        self._matrix = matrix
-        self._event_log = []
-
-        self._resolve_state_status = _CommandStatus.NIL
-
-    # commands
     @abstractmethod
-    def resolve_state(self) -> None:
+    def add_points(self, points: int) -> None:
         """
-        pre:  стейт установлен на DEFAULT
-        post: стейт установлен на DEFAULT
+        post: self._points += points
+        """
+
+    @abstractmethod
+    def remove_points(self, points: int) -> None:
+        """
+        cannot fail: if points <= self._points then self._points = 0
+        post: self._points -= points
+        """
+
+
+class Board(Printable):
+    """
+    класс анализа
+    игровая доска
+    """
+
+    _matrix: list[list[Piece]]
+    _move_status = -1
+
+    @abstractmethod
+    def move(self) -> None:
+        """
+        pre : move is valid
+        post: pieces swaped
+        post: board processed
         """
 
     @abstractmethod
     def _delete_elements(self) -> None:
         """
-        pre:  state == DELETE_ELEMS
         post: элементы, давшие комбинации, становятся пустыми
         post: обновлен лог какие элементы были "уничтожены"
-        post: стейт установлен на SHIFT_ELEMS
         """
 
     @abstractmethod
     def _shift_elements(self) -> None:
         """
-        pre:  state == SHIFT_ELEMS
         post: не-пустые элементы смещены вниз на место пустых
-        post: стейт установлен на ADD_ELEMS
         """
 
     @abstractmethod
     def _add_new_elements(self) -> None:
         """
-        pre:  state == ADD_ELEMS
-        post: пустые элементы заменены на новые
-        post: стейт установлен на DELETE_ELEMS или DEFAULT
+        post: пустые элементы заменены на новые (случайные)
         """
 
-    # queries
-    def get_resolve_state_status(self) -> _CommandStatus:
-        return self._resolve_state_status
+    @abstractmethod
+    def render(self) -> None:
+        pass
+
+    # query
+    def get_move_status(self) -> int:
+        return self._move_status
 
 
-class MoveEvent(Event):
+class ConcreteBoard8X8(Board):
+    def __init__(self) -> None:
+        super().__init__()
+        self._matrix = [[ConcretePiece()] * 8] * 8
 
-    # constructor
-    def __init__(self, matrix: AdtMatrix) -> None:
-        super().__init__(matrix)
-        self._accept_move_status = _CommandStatus.NIL
+
+class Bonus(ABC):
+    """
+    класс анализа
+    бонус, влияющий на игру. применяемый игроком
+    """
+
+    _board: Board
+
+    @abstractmethod
+    def apply_bonus(self) -> None:
+        """
+        post: board state changed
+        """
+
+
+class BonusList(Printable):
+    """
+    класс анализа
+    список бонусов, доступных игроку
+    """
+
+    _bonus_list: set[Bonus]
+    _remove_bonus_status: int = -1
 
     # commands
     @abstractmethod
-    def accept_move(self, coords: Coords) -> None:
+    def add_bouns(self, bonus: Bonus) -> None:
         """
-        pre:  ход валиден
-        post: элементы поменяны местами.
-        post: стейт изменен на DELETE_ELEMS
+        post: bonus added to set
         """
 
-    # queries
-    def get_accept_move_status(self) -> _CommandStatus:
-        return self._accept_move_status
-
-
-class BonusEvent(Event):
-
-    # constructor
-    def __init__(self, matrix: AdtMatrix) -> None:
-        super().__init__(matrix)
-        self._accept_bonus_status = _CommandStatus.NIL
-
-    # commands
     @abstractmethod
-    def accept_bonus(self, bonus: Bonus) -> None: # FIX:
+    def remove_bouns(self, bonus: Bonus) -> None:
         """
-        pre:  применение бонуса возможно
-        post: поле изменено согласно эффекту бонуса
-        post: стейт изменен на DELETE_ELEMS
+        pre : has bonus
+        post: bonus removed from set
         """
+
+    # query
+    @abstractmethod
+    def has_bouns(self, bonus: Bonus) -> bool:
+        pass
+
+    def get_remove_bonus_status(self) -> int:
+        return self._remove_bonus_status
+
+
+class MatchHandler(ABC):
+    """
+    класс реализации
+    механика поиска комбинаций на поле
+    """
+
+    _board: Board
+    _score: Score
+    _process_matches_status = -1
+
+    # command
+    @abstractmethod
+    def process_matches(self) -> None:
+        """
+        pre : has matches
+        post: matched pieces are empty
+        post: score increased
+        """
+
+    # query
+    @abstractmethod
+    def has_matches(self) -> bool:
+        pass
+
+    def process_matches_status(self) -> int:
+        return self._process_matches_status
+
+
+class Combinations(ABC):
+    """
+    класс реализации
+    получение значений счёта и бонусов из уничтоженных элементов
+    """
+
+    _picies: dict[Piece, int]
 
     # queries
-    def get_accept_bonus_status(self) -> _CommandStatus:
-        return self._accept_bonus_status
+    @abstractmethod
+    def get_value(self) -> Points:
+        pass
 
-
-
+    @abstractmethod
+    def get_bonus(self) -> Bonus:
+        pass

@@ -1,88 +1,91 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 
-from .utils import _CommandStatus
+from .elements import *
+
+State = tuple[Board, Score, BonusList]
 
 
-class GameElements(ABC):
+class History(ABC):
+    """
+    класс проектирования
+    последовательность состояний игры
+    """
 
-    # constructor
-    def __init__(self, matrix: Matrix, history: History) -> None:
-        self._matrix = matrix
-        self._history = history
+    _state_list: list[State]
 
-        self._accept_command_status = _CommandStatus.NIL
-
-    # commands
-    def create_matrix(self) -> None:
+    @abstractmethod
+    def add_state(self, state: State) -> None:
         """
-        pre:
-        post: матрица (пере)создана
-        """
-
-    def clear_history(self) -> None:
-        """
-        pre:
-        post: история очищена
+        post: added new state to list
         """
 
-    def undo_history(self) -> None:
+    @abstractmethod
+    def undo(self) -> None:
         """
-        pre:  история не пустая
-        post: история -1
+        post: remove last state from list
         """
-
-    def accept_command(self, command: UserCommand) -> None:
-        """
-        pre:  команда валидна
-        post: элементы игры изменены соответственно команде, или игра закончена
-        """
-
-    # queries
-    def get_accept_command_status(self) -> _CommandStatus:
-        return self._accept_command_status
 
 
 class Game(ABC):
+    """
+    класс анализа
+    игра и управление ей
+    """
 
-    # constructor
-    def __init__(self, ui: AdtUserInterface, game_elements: GameElements) -> None:
-        self._ui = ui
-        self._game_elements = game_elements
+    _game_elements: list[Printable]
+    _history: History
 
-        self._accept_command_status = _CommandStatus.NIL
-
-    # commands
-    def draw_ui(self) -> None:
+    @abstractmethod
+    def render_game(self) -> None:
         """
-        pre:
-        post: ui выведен на экран
-        """
-
-    def start_game(self) -> None:
-        """
-        pre:
-        post: инициализированы элементы игры: поле, счёт, бонусы
+        post: game rendered in console
         """
 
-    def end_game(self) -> None:
+
+class GameFactory(ABC):
+    """
+    класс проектирования
+    создание новой игры
+    """
+
+    # query
+    @abstractmethod
+    def create_new_game(self) -> Game:
         """
-        pre:
-        post: игра закончена
+        returns new game
         """
 
-    def restart_game(self) -> None:
+
+class Command(ABC):
+    """
+    класс реализации
+    действия игрока, влияющие на игру
+    """
+
+    # command
+    @abstractmethod
+    def execute(self) -> None:
         """
-        pre:
-        post: игра пересоздана
+        post: game updated or ended
         """
 
-    def accept_command(self, command: UserCommand) -> None:
-        """
-        pre:  команда валидна
-        post: элементы игры изменены соответственно команде, или игра закончена
-        post: ui перерисован
-        """
 
-    # queries
-    def get_accept_command_status(self) -> _CommandStatus:
-        return self._accept_command_status
+class MoveCommand(Command):
+
+    def __init__(self, board: Board) -> None:
+        super().__init__()
+        self._board = board
+
+
+class BonusCommand(Command):
+
+    def __init__(self, bonus_list: BonusList) -> None:
+        super().__init__()
+        self._bonus_list = bonus_list
+
+
+class GameCommand(Command):
+
+    def __init__(self, game: Game) -> None:
+        super().__init__()
+        self._game = game
