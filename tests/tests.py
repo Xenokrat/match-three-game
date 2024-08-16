@@ -8,13 +8,13 @@ class TestMatchThreeGame(unittest.TestCase):
 
     def test_piece(self):
         piece = ConcretePiece()
-        self.assertEqual(piece._value, PieceEnum.EMPTY)
+        self.assertEqual(piece._value, PieceEnum.X)
         piece.set_value(PieceEnum.A)
         self.assertEqual(piece._value, PieceEnum.A)
         piece.set_random_value()
         self.assertIn(piece._value, PieceEnum)
         piece.set_empty_value()
-        self.assertEqual(piece._value, PieceEnum.EMPTY)
+        self.assertEqual(piece._value, PieceEnum.X)
 
     def test_score(self):
         score = ConcreteScore()

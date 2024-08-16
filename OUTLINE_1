@@ -1,0 +1,17 @@
+   State
+ 𝓒 History
+ 𝓒 ConcreteHistory
+ 𝓒 Game
+ 𝓒 ConcreteGame
+ 𝓒 GameFactory
+ 𝓒 Command
+ 𝓒 MoveCommand
+ 𝓒 BonusCommand
+ 𝓒 GameCommand
+ 𝓒 EndGameCommand
+ 𝓒 InvalidCommand
+ 𝓒 ConcreteGameFactory
+ 𝓒 AbsCommandDispatcher
+ 𝓒 CommandDispatcher
+ 𝓒 AbsGameLoop
+ 𝓒 GameLoop
